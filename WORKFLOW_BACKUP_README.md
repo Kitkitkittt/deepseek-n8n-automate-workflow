@@ -1,83 +1,16 @@
-# N8N Workflow Backup Solution
+# n8n workflow backup
 
-This solution addresses the issue of n8n workflows being lost after system updates or container restarts, as mentioned in the [n8n community post](https://community.n8n.io/t/lost-all-workflows-credentials-everythig-after-ubuntu-update/22812/7).
+This guide maps the backup-related files and settings in this checkout. It is not a tested recovery procedure.
 
-## What's Included
+## What is checked in
 
-1. **Enhanced docker-compose.yml**:
-   - Separate volume mounts for different n8n data types
-   - Automated n8n backup system with `N8N_PUSH_BACKUP_ENABLED`
-   - Recovery mode enabled with `N8N_RECOVERY_MODE`
-   - Dedicated database backup container
-   - Proper health checks for all services
+- The main [Compose manifest](docker-compose.yml) and the [alternate manifest](docker-composebackup.yml) both declare `n8n_backup`, whose entrypoint schedules PostgreSQL dumps under the host bind mount `./backups/n8n_db_backups` and removes dumps that match `-mtime +7`.
+- Both files declare `N8N_PUSH_BACKUP_ENABLED` and `N8N_RECOVERY_MODE` on `n8n_main`. Treat those as configuration declarations, not proof that the selected n8n image recognizes them or creates or restores workflow backups.
+- [`backup_n8n_workflows.sh`](backup_n8n_workflows.sh) and [`backup_n8n_workflows.ps1`](backup_n8n_workflows.ps1) are helpers for an existing instance, not part of an offline check.
+- `n8n/backup/workflows/` contains a checked-in example. The separate `backups/` directory is for instance data; it is not a checked-in recovery guide or a trusted source of test fixtures.
 
-2. **Backup Scripts**:
-   - `backup_n8n_workflows.sh` (Linux/macOS)
-   - `backup_n8n_workflows.ps1` (Windows)
-   - Both scripts export workflows via the n8n API
+## Recovery status
 
-3. **Backup Directories**:
-   - `backups/n8n_workflows`: Workflow JSON files
-   - `backups/n8n_credentials`: Credential data
-   - `backups/n8n_binary_data`: Binary data
-   - `backups/n8n_settings`: Settings
-   - `backups/n8n_backups`: Automated n8n backups
-   - `backups/n8n_db_backups`: PostgreSQL database backups
+There is no tracked `backups/n8n_README.md`. Verify the actual backup files and restore behavior in a separately authorized environment before relying on them. A tracked script or volume setting does not prove a backup is current or restorable.
 
-## How to Use
-
-### Running the Stack
-
-```bash
-# Start the stack with the enhanced configuration
-docker-compose up -d
-```
-
-### Setting Up Regular Backups
-
-#### Linux/macOS:
-```bash
-# Make the script executable
-chmod +x backup_n8n_workflows.sh
-
-# Set up a cron job (every 6 hours)
-(crontab -l 2>/dev/null; echo "0 */6 * * * $(pwd)/backup_n8n_workflows.sh") | crontab -
-```
-
-#### Windows:
-1. Edit `backup_n8n_workflows.ps1` to set your n8n API key
-2. Open Task Scheduler
-3. Create a new task to run the script every 6 hours
-
-### Manual Backup
-
-You can also manually trigger a backup:
-
-```bash
-# Linux/macOS
-./backup_n8n_workflows.sh
-
-# Windows (PowerShell)
-.\backup_n8n_workflows.ps1
-```
-
-## Preventing Data Loss
-
-The enhanced configuration helps prevent data loss by:
-
-1. **Multiple Backup Methods**: Both file-based and database backups
-2. **Recovery Mode**: n8n's built-in recovery mechanism
-3. **Separate Volume Mounts**: Critical data is stored in separate volumes
-4. **Automated Backups**: Regular backups without manual intervention
-5. **Clear Documentation**: The `backups/n8n_README.md` file contains recovery instructions
-
-## Recovery Process
-
-If workflows are lost despite these measures, see `backups/n8n_README.md` for detailed recovery instructions.
-
-## Important Notes
-
-- Never use `docker-compose down -v` as it will delete volumes
-- Always check volume mounts before updating containers
-- Consider setting up external backups for critical workflows
-- Test the recovery process periodically 
+For docs-only changes, use the README's [offline verification](README.md#offline-verification). Do not run backup scripts, schedule jobs, read credentials, or restore, import, or execute workflows for this check.
