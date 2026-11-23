@@ -21,7 +21,7 @@ If a `swarm-ready` skill is installed, load it. Otherwise execute the documented
 
 ## Repository starting point
 
-Read: [README.md](README.md).
+Read the [Compose layout](README.md#installation), [backup guide](WORKFLOW_BACKUP_README.md), and [offline verification instructions](README.md#offline-verification).
 
 Continue an existing approved issue or a clearly scoped user objective after inspecting the source map below. If none is selected, return the smallest useful improvement and its verifier as the handoff; do not begin a portfolio-wide rewrite.
 
@@ -41,7 +41,9 @@ The base above is an inspection snapshot, not a permanent working branch. Refres
 
 ## Verification starting point
 
-No executable acceptance command was established by this bounded source inspection. Read `README.md` and record the narrowest existing check before implementation. Do not invent a `test` command or infer that the repository has no tests from this gap. For a documentation-only task, check links, factual source anchors and whitespace; do not build unrelated application code.
+Use the README's Git checks and compare [`docker-compose.yml`](docker-compose.yml) and [`docker-composebackup.yml`](docker-composebackup.yml) as literal YAML. At the inspected revision, both files declare 12 services and six named volumes, with no profiles and no Ollama service. The PostgreSQL init-script mount is present only in the main file.
+
+This is static source verification. Do not use Compose interpolation or startup, read `.env` or other credentials, run backup helpers, download models, or import or activate workflows. Record service health, backup and restoration, and live workflow behavior separately as untested.
 
 ## Required handoff result
 

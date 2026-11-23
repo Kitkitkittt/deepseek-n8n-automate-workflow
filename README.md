@@ -8,8 +8,9 @@ environment including Open WebUI for an interface to chat with your N8N agents.
 
 Heavily inspired by [n8n-io](https://github.com/n8n-io) and [coleam00](https://github.com/coleam00)
 This project combines the self-hosted n8n platform with a curated list of compatible AI products and components to quickly get started with building self-hosted AI workflows.
-This fork focuses on the core apps, removes Ollama dependencies in Docker for more models scaling, and adds easy accessability to local files. 
-*Important* Reinforce Backup System for n8n to support workflows recover.
+This fork defines separate n8n main and worker services, local file mounts, and a database backup service. Neither checked-in Compose file includes Ollama.
+
+For documentation changes, start with [offline verification](#offline-verification) and the [Swarm-ready handoff](SWARM_READY.md).
 
 > [!TIP]
 > [Read the announcement](https://blog.n8n.io/self-hosted-ai/)
@@ -28,12 +29,7 @@ store with an comprehensive API
 ✅ [**PostgreSQL**](https://www.postgresql.org/) -  Workhorse of the Data
 Engineering world, handles large amounts of data safely.
 
-✅ [**Enhanced n8n Workflow Backup System**](./WORKFLOW_BACKUP_README.md) - Resilient configuration with automated backups and recovery mechanisms.
-
-### What will you need to add
-
-✅ [**Ollama**](https://ollama.com/) - Cross-platform LLM platform to install
-and run the latest local LLMs
+✅ [**Workflow backup files**](WORKFLOW_BACKUP_README.md) — Compose backup settings and helper scripts. A successful backup or restore is not verified by the presence of these files.
 
 ### What you can build
 
@@ -51,183 +47,30 @@ and run the latest local LLMs
 
 ## Installation
 
-### Download the open-source LLMs tool [right here](https://ollama.com/):
+Use [docker-compose.yml](docker-compose.yml) as the main Compose definition for this checkout. [docker-composebackup.yml](docker-composebackup.yml) is a separate manifest, not an overlay or an automatically selected backup. For example, only the main file mounts [`pgvector-init.sql`](pgvector-init.sql) into PostgreSQL's initialization directory.
 
-After installation, run the app and visit [http://localhost:11434]() on your browser, you should get: 
+Neither file declares `cpu` or `gpu-nvidia` profiles or an Ollama service, so the upstream profile-based commands do not describe this fork. Ollama, if used, is a separately configured service. The presence of an example workflow in `n8n/backup/workflows/` does not mean it is installed in a fresh instance or available at a fixed URL.
 
-```
-Ollama is running
-```
+## Offline verification
 
-Now you can download and use any GGUF/HF/EXL2 LLMs directly in terminal or through any supported platform.
-Go to [Ollama Models](https://ollama.com/search), choose any models you want to run, I suggest [llama3.2:3b](https://ollama.com/library/llama3.2:3b) for first use, then run this code:
+From the repository root, run these source-only checks:
 
-```
-ollama run llama3.2:3b
-```
-Or you can try [deepseek-r1](https://ollama.com/library/deepseek-r1) to use the latest opensource reasoning model:
-
-```
-ollama run deepseek-r1
+```bash
+git --no-lazy-fetch ls-files --error-unmatch -- docker-compose.yml docker-composebackup.yml pgvector-init.sql WORKFLOW_BACKUP_README.md
+git --no-lazy-fetch diff --check HEAD
 ```
 
-These are only the mainstream LLMs models, you can access more advanced ones on websites like: [Models - Hugging Face](https://huggingface.co/models) and even customize/fine tune your own models. To check whether a model can run locally with your computer specs, refer to this [extractum-llms](https://llm.extractum.io/list/) list.
-
-##### Optional: Change the models installation folder to different drive.
-
-Since Ollama stores models in your C:\ drive, it is difficult to scale up for more sophisticated models.
-You can change it by following this guide: [How to Deploy and Experiment with Ollama Models on Your Local Machine (Windows) | by Avighan Majumder | Medium](https://medium.com/@dpn.majumder/how-to-deploy-and-experiment-with-ollama-models-on-your-local-machine-windows-34c967a7ab0e)
-
-### Install Docker and the local AI kit
-
-Download and install these dependencies:
-
-* [Git - Downloads](https://git-scm.com/downloads) - to manage source code
-* [Windows | Docker Docs](https://docs.docker.com/desktop/setup/install/windows-install/) - to develop and host the apps
-
-### For Nvidia GPU users
-
-```
-git clone https://github.com/Kohnnn/local-ai-starter-kit.git
-cd local-ai-starter-kit
-docker compose --profile gpu-nvidia up
-```
-
-> [!NOTE]
-> If you have not used your Nvidia GPU with Docker before, please follow the
-> [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.md).
-
-### For Mac / Apple Silicon users
-
-If you're using a Mac with an M1 or newer processor, you can't expose your GPU
-to the Docker instance, unfortunately. There are two options in this case:
-
-1. Run the starter kit fully on CPU, like in the section "For everyone else"
-   below
-2. Run Ollama on your Mac for faster inference, and connect to that from the
-   n8n instance
-
-If you want to run Ollama on your mac, check the
-[Ollama homepage](https://ollama.com/)
-for installation instructions, and run the starter kit as follows:
-
-```
-git clone https://github.com/Kohnnn/local-ai-starter-kit.git
-cd local-ai-starter-kit
-docker compose up
-```
-
-After you followed the quick start set-up below, change the Ollama credentials
-by using `http://host.docker.internal:11434/` as the host.
-
-### For everyone else
-
-```
-git clone https://github.com/Kohnnn/local-ai-starter-kit.git
-cd local-ai-starter-kit
-docker compose --profile cpu up
-```
-
-## ⚡️ Quick start and usage
-
-The main component of the self-hosted AI starter kit is a docker compose file
-pre-configured with network and disk so there isn't much else you need to
-install. After completing the installation steps above, follow the steps below
-to get started.
-
-1. Open [http://localhost:5678/](http://localhost:5678/) in your browser to set up n8n. You'll only
-   have to do this once. You are NOT creating an account with n8n in the setup here,
-   it is only a local account for your instance!
-2. Open the included workflow:
-   [http://localhost:5678/workflow/vTN9y2dLXqTiDfPT](http://localhost:5678/workflow/vTN9y2dLXqTiDfPT)
-3. Create credentials for every service:
-
-   Ollama URL: http://localhost:11434 ##Your local Ollama
-
-   Postgres: use DB, username, and password from .env. Host is postgres
-
-   Qdrant URL: http://qdrant:6333 (API key can be whatever since this is running locally)
-
-   Google Drive: Follow [this guide from n8n](https://docs.n8n.io/integrations/builtin/credentials/google/).
-   Don't use localhost for the redirect URI, just use another domain you have, it will still work!
-   Alternatively, you can set up [local file triggers](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger/).
-   
-   This setting should be in your OpenWebUI:
-   
-   ![image](https://github.com/user-attachments/assets/a8d0c3e8-a918-4ff9-af84-51b5d0ff4507)
-
-
-   
-5. Select **Test workflow** to start running the workflow.
-6. If this is the first time you're running the workflow, you may need to wait
-   until Ollama finishes downloading your selected model. You can inspect the docker
-   console logs to check on the progress.
-7. Make sure to toggle the workflow as active and copy the "Production" webhook URL!
-8. Open [http://localhost:3000/](http://localhost:3000/) in your browser to set up Open WebUI.
-   You'll only have to do this once. You are NOT creating an account with Open WebUI in the
-   setup here, it is only a local account for your instance!
-9. Go to Workspace -> Functions -> Add Function -> Give name + description then paste in
-   the code from `n8n_pipe.py`
-
-   The function is also [published here on Open WebUI&#39;s site](https://openwebui.com/f/coleam/n8n_pipe/).
-10. Click on the gear icon and set the n8n_url to the production URL for the webhook
-   you copied in a previous step.
-11. Toggle the function on and now it will be available in your model dropdown in the top left!
-
-**To open n8n at any time, visit [http://localhost:5678/](http://localhost:5678/) in your browser.
-To open Open WebUI at any time, visit [http://localhost:3000/](http://localhost:3000/).**
-
-With your n8n instance, you'll have access to over 400 integrations and a
-suite of basic and advanced AI nodes such as
-[AI Agent](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/),
-[Text classifier](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.text-classifier/),
-and [Information Extractor](https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.information-extractor/)
-nodes. To keep everything local, just remember to use the Ollama node for your
-language model and Qdrant as your vector store.
-
-> [!NOTE]
-> This starter kit is designed to help you get started with self-hosted AI
-> workflows. While it's not fully optimized for production environments, it
-> combines robust components that work well together for proof-of-concept
-> projects. You can customize it to meet your specific needs
+Expect four tracked paths and no whitespace errors. Review the literal YAML service, profile, and mount declarations without resolving environment variables. Do not load `.env`, start Compose, pull images or models, or import or activate workflows for this check.
 
 ## Upgrading
 
-### For Nvidia GPU users
-
-```
-docker compose --profile gpu-nvidia pull
-docker compose create && docker compose --profile gpu-nvidia up
-```
-
-### For Mac / Apple Silicon users
-
-```
-docker compose pull
-docker compose create && docker compose up
-```
-
-### For everyone else
-
-```
-docker compose --profile cpu pull
-docker compose create && docker compose --profile cpu up
-```
+Before changing an existing instance, review the exact manifest in use and its persistent mounts. The two manifests are not interchangeable. A source check says nothing about whether the instance has a restorable backup; see the [backup guide](WORKFLOW_BACKUP_README.md#recovery-status) for what this checkout documents.
 
 ## 🛡️ Data Protection and Workflow Backup
 
-This kit includes an enhanced docker-compose configuration that protects against n8n workflow data loss, which can sometimes occur during system updates or container restarts. Key features include:
+The [backup guide](WORKFLOW_BACKUP_README.md) maps the declared PostgreSQL dump service, local backup paths, and helper scripts. It distinguishes the tracked workflow example from data generated by a running instance.
 
-- **Automated Backup System**: Workflows are automatically backed up at regular intervals
-- **Separate Volume Mounts**: Critical data is stored in separate, persistent volumes
-- **Database Backup Service**: Daily PostgreSQL backups with 7-day retention
-- **Recovery Mode**: Built-in mechanisms to recover lost workflows
-- **Backup Scripts**: Both bash and PowerShell scripts for manual workflow exports
-
-For detailed instructions on recovery procedures, see [Workflow Backup README](./WORKFLOW_BACKUP_README.md).
-
-> [!IMPORTANT]
-> Never use `docker-compose down -v` as it will delete volumes containing your workflow data!
+Do not use `docker compose down -v` as a verification step: it removes Compose volumes. Bind-mounted backup directories are not a substitute for a verified recovery plan.
 
 ## 👓 Recommended reading
 
@@ -285,24 +128,7 @@ interact with the local filesystem.
 
 ### Backup and recovery
 
-The docker-compose.yml has been enhanced to prevent workflow data loss as described in [this n8n community post](https://community.n8n.io/t/lost-all-workflows-credentials-everythig-after-ubuntu-update/22812/7). Key improvements include:
-
-- Multiple backup directories with specific data types
-- Automated workflow backups with `N8N_PUSH_BACKUP_ENABLED=true`
-- Recovery mode with `N8N_RECOVERY_MODE=true`
-- Daily database backups
-- Backup scripts for both Linux/macOS and Windows
-
-For manual backups, you can use:
-```bash
-# Linux/macOS
-./backup_n8n_workflows.sh
-
-# Windows
-.\backup_n8n_workflows.ps1
-```
-
-For detailed recovery steps, refer to [backups/n8n_README.md](./backups/n8n_README.md).
+See [backup and recovery status](WORKFLOW_BACKUP_README.md#recovery-status). The helper scripts target a live n8n instance; do not run them for documentation verification.
 
 **Using free AI Agent API**
 
